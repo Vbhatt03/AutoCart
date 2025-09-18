@@ -6,9 +6,10 @@ import time
 CAM_INDEX = 0
 MAX_ANGLE_ABS = 420.0
 
-# Pick an ArUco dictionary (use 4x4_50 for small simple markers)
+# ArUco setup
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 parameters = cv2.aruco.DetectorParameters()
+detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
 
 def find_wheel_center(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -27,9 +28,8 @@ def angle_from_center(center, pt):
     dy = center[1] - pt[1]  # invert y-axis so up is positive
     ang_rad = math.atan2(dy, dx)
     ang_deg = math.degrees(ang_rad)
-    # convert so 0° is up
+    # 0° is up
     angle_from_up = 90 - ang_deg
-    # normalize to [-180,180)
     return ((angle_from_up + 180) % 360) - 180
 
 def main():
@@ -70,8 +70,6 @@ def main():
     prev_angle = None
     rotation_offset = 0.0
 
-    detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
-
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -80,7 +78,7 @@ def main():
         corners, ids, _ = detector.detectMarkers(frame)
 
         if ids is not None and len(corners) > 0:
-            # use first detected tag center
+            # Use first detected tag center
             pts = corners[0][0]
             tag_center = np.mean(pts, axis=0).astype(int)
             raw_angle = angle_from_center(center, tag_center)
@@ -96,11 +94,11 @@ def main():
 
             clamped = max(-MAX_ANGLE_ABS, min(MAX_ANGLE_ABS, continuous_angle))
 
-            # debug draw
+            # Draw for debug
             cv2.circle(frame, center, 3, (255,255,0), -1)
             cv2.circle(frame, tuple(tag_center), 4, (0,255,0), -1)
             cv2.aruco.drawDetectedMarkers(frame, corners, ids)
-            txt = f"angle: {continuous_angle:.2f} deg  clamped: {clamped:.2f}"
+            txt = f"Angle: {continuous_angle:.2f}  Clamped: {clamped:.2f}"
             cv2.putText(frame, txt, (10,30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
             print(f"{time.time():.2f}\t{continuous_angle:.2f}")
 
